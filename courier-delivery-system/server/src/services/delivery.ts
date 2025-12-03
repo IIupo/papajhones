@@ -1,8 +1,11 @@
-import pool from '../db/postgres';
+import pool, { PgClient } from '../db/postgres';
 
-const DELIVERY_RADIUS_M = 200; // настройте
+export const DELIVERY_RADIUS_M = Number(process.env.DELIVERY_RADIUS_M) || 200;
 
-function haversineMeters(lat1: number, lon1: number, lat2: number, lon2: number) {
+export type Geo = { lat: number; lng: number };
+export type DeliveryResult = { id: string; success: boolean; reason?: string };
+
+export function haversineMeters(lat1: number, lon1: number, lat2: number, lon2: number): number {
     const toRad = (v: number) => (v * Math.PI) / 180;
     const R = 6371000;
     const dLat = toRad(lat2 - lat1);
@@ -15,13 +18,21 @@ function haversineMeters(lat1: number, lon1: number, lat2: number, lon2: number)
     return R * c;
 }
 
-export async function deliverOrdersBatch(courierId: string, orderIds: string[], geo: { lat: number; lng: number }) {
-    const client = await pool.connect();
-    const results: { id: string; success: boolean; reason?: string }[] = [];
+/**
+ * Пакетная пометка доставленных заказов.
+ * Возвращает результаты по каждому id в порядке запроса.
+ */
+export async function deliverOrdersBatch(courierId: string, orderIds: string[], geo: Geo): Promise<DeliveryResult[]> {
+    if (!courierId) throw new Error('missing courierId');
+    if (!Array.isArray(orderIds) || orderIds.length === 0) throw new Error('orderIds required');
+
+    const client: PgClient = await pool.connect();
+    const results: DeliveryResult[] = [];
+
     try {
         await client.query('BEGIN');
 
-        const res = await client.query(
+        const selectRes = await client.query(
             `SELECT id, delivery_lat, delivery_lng, assigned_to, status
              FROM orders
              WHERE id = ANY($1::text[])
@@ -30,7 +41,7 @@ export async function deliverOrdersBatch(courierId: string, orderIds: string[], 
         );
 
         const rowsById = new Map<string, any>();
-        for (const r of res.rows) rowsById.set(r.id, r);
+        for (const r of selectRes.rows) rowsById.set(r.id, r);
 
         for (const id of orderIds) {
             const row = rowsById.get(id);

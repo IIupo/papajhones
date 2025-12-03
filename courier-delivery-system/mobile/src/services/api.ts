@@ -1,12 +1,20 @@
 import axios from 'axios';
 
-const API_BASE_URL = 'http://your-server-url/api'; // Replace with your server URL
+const API_BASE_URL = process.env.API_BASE_URL || 'http://your-server-url/api'; // set via .env in real env
+const axiosInstance = axios.create({
+    baseURL: API_BASE_URL,
+    timeout: 10000,
+});
 
-export const fetchOrders = async (courierId) => {
+type Geo = { lat: number; lng: number };
+
+/**
+ * Получить список заказов для курьера
+ */
+export const fetchOrders = async (courierId: string) => {
+    if (!courierId) throw new Error('missing courierId');
     try {
-        const response = await axios.get(`${API_BASE_URL}/orders`, {
-            params: { courierId },
-        });
+        const response = await axiosInstance.get('/orders', { params: { courierId } });
         return response.data;
     } catch (error) {
         console.error('Error fetching orders:', error);
@@ -14,9 +22,15 @@ export const fetchOrders = async (courierId) => {
     }
 };
 
-export const markOrderAsDelivered = async (orderId, geolocation) => {
+/**
+ * Отметить один заказ доставленным.
+ * Передаёт courierId + геолокацию.
+ */
+export const markOrderAsDelivered = async (orderId: string, courierId: string, geolocation: Geo) => {
+    if (!orderId || !courierId || !geolocation) throw new Error('invalid args');
     try {
-        const response = await axios.post(`${API_BASE_URL}/orders/${orderId}/deliver`, {
+        const response = await axiosInstance.post(`/orders/${orderId}/deliver`, {
+            courierId,
             geolocation,
         });
         return response.data;
@@ -26,31 +40,36 @@ export const markOrderAsDelivered = async (orderId, geolocation) => {
     }
 };
 
-export const markOrderAtRestaurant = async (orderId) => {
+/**
+ * Alias: курьер нажал "в ресторане".
+ * Сервер выберет и вернёт назначенные заказы.
+ */
+export const setCourierAtRestaurant = async (courierId: string) => {
+    if (!courierId) throw new Error('missing courierId');
     try {
-        const response = await axios.post(`${API_BASE_URL}/orders/${orderId}/at-restaurant`);
-        return response.data;
-    } catch (error) {
-        console.error('Error marking order at restaurant:', error);
-        throw error;
-    }
-};
-
-// Добавлено: отметить курьера "в ресторане" — сервер попытается назначить заказ
-export const setCourierAtRestaurant = async (courierId) => {
-    try {
-        const response = await axios.post(`${API_BASE_URL}/couriers/${courierId}/at-restaurant`);
-        return response.data; // вернёт назначённые заказ(ы) или 204
+        const response = await axiosInstance.post(`/couriers/${courierId}/at-restaurant`);
+        return response.data; // { orders: [...] } или 204
     } catch (error) {
         console.error('Error setting courier at restaurant:', error);
         throw error;
     }
 };
 
-// Новое: пометить несколько заказов как доставленные (отправляет геолокацию + список id)
-export const markOrdersAsDelivered = async (orderIds, geolocation) => {
+/**
+ * Поддерживается для совместимости — wrapper, если где-то вызывается markOrderAtRestaurant
+ * раньше с courierId.
+ */
+export const markOrderAtRestaurant = setCourierAtRestaurant;
+
+/**
+ * Пометить несколько заказов доставленными (batch).
+ * Теперь обязательно передаём courierId.
+ */
+export const markOrdersAsDelivered = async (orderIds: string[], courierId: string, geolocation: Geo) => {
+    if (!Array.isArray(orderIds) || !courierId || !geolocation) throw new Error('invalid args');
     try {
-        const response = await axios.post(`${API_BASE_URL}/orders/deliver-batch`, {
+        const response = await axiosInstance.post(`/orders/deliver-batch`, {
+            courierId,
             orderIds,
             geolocation,
         });
@@ -61,10 +80,13 @@ export const markOrdersAsDelivered = async (orderIds, geolocation) => {
     }
 };
 
-// Новое: курьер вернулся в ресторан (заканчивает маршрут, можно использовать для логики очистки/синхронизации)
-export const setCourierReturnedToRestaurant = async (courierId) => {
+/**
+ * Курьер вернулся в ресторан — завершил маршрут / очистка состояния.
+ */
+export const setCourierReturnedToRestaurant = async (courierId: string) => {
+    if (!courierId) throw new Error('missing courierId');
     try {
-        const response = await axios.post(`${API_BASE_URL}/couriers/${courierId}/return-to-restaurant`);
+        const response = await axiosInstance.post(`/couriers/${courierId}/return-to-restaurant`);
         return response.data;
     } catch (error) {
         console.error('Error setting courier returned to restaurant:', error);
