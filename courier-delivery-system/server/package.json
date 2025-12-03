@@ -1,0 +1,29 @@
+{
+  "name": "courier-delivery-system-server",
+  "version": "1.0.0",
+  "main": "src/index.ts",
+  "scripts": {
+    "start": "ts-node src/index.ts",
+    "build": "tsc",
+    "dev": "ts-node-dev src/index.ts",
+    "lint": "eslint . --ext .ts"
+  },
+  "dependencies": {
+    "express": "^4.17.1",
+    "pg": "^8.7.1",
+    "axios": "^0.21.1",
+    "dotenv": "^10.0.0",
+    "cors": "^2.8.5"
+  },
+  "devDependencies": {
+    "typescript": "^4.3.2",
+    "ts-node": "^10.0.0",
+    "ts-node-dev": "^1.1.8",
+    "eslint": "^7.27.0",
+    "@typescript-eslint/parser": "^4.27.0",
+    "@typescript-eslint/eslint-plugin": "^4.27.0"
+  },
+  "engines": {
+    "node": ">=14.0.0"
+  }
+}

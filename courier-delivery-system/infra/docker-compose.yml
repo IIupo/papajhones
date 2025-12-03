@@ -1,0 +1,30 @@
+version: '3.8'
+
+services:
+  postgres:
+    image: postgres:13
+    restart: always
+    environment:
+      POSTGRES_USER: user
+      POSTGRES_PASSWORD: password
+      POSTGRES_DB: courier_delivery
+    volumes:
+      - ./postgres:/docker-entrypoint-initdb.d
+    ports:
+      - "5432:5432"
+
+  server:
+    build:
+      context: ../server
+      dockerfile: Dockerfile
+    restart: always
+    environment:
+      DATABASE_URL: postgres://user:password@postgres:5432/courier_delivery
+    ports:
+      - "3000:3000"
+    depends_on:
+      - postgres
+
+networks:
+  default:
+    driver: bridge

@@ -1,0 +1,10 @@
+services:
+  courierdeliverysystem:
+    image: courierdeliverysystem
+    build:
+      context: courier-delivery-system/mobile
+      dockerfile: ./Dockerfile
+    environment:
+      NODE_ENV: production
+    ports:
+      - 3000:3000
