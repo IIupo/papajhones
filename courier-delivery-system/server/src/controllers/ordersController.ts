@@ -1,35 +1,22 @@
 import { Request, Response } from 'express';
-import { Order } from '../models/order';
-import { IikoClient } from '../services/iikoClient';
-import { OneCClient } from '../services/oneCClient';
-import { GeolocationVerifier } from '../services/geolocationVerifier';
-import { Assignment } from '../services/assignment';
+import Order from '../models/order';
+import * as iikoClient from '../services/iikoClient';
+import * as oneCClient from '../services/oneCClient';
+import { verifyGeolocation } from '../services/geolocationVerifier';
+import { assignOrdersToCourier } from '../services/assignment';
 
 export class OrdersController {
-    private iikoClient: IikoClient;
-    private oneCClient: OneCClient;
-    private geolocationVerifier: GeolocationVerifier;
-    private assignment: Assignment;
-
-    constructor() {
-        this.iikoClient = new IikoClient();
-        this.oneCClient = new OneCClient();
-        this.geolocationVerifier = new GeolocationVerifier();
-        this.assignment = new Assignment();
-    }
-
     public async fetchOrders(req: Request, res: Response): Promise<void> {
         try {
-            const orders = await this.iikoClient.getOrders();
+            const orders = await iikoClient.getOrders();
             res.status(200).json(orders);
         } catch (error) {
-            res.status(500).json({ message: 'Error fetching orders', error });
+            res.status(500).json({ message: 'Error fetching orders', error: String(error) });
         }
     }
 
     public async updateOrderStatus(req: Request, res: Response): Promise<void> {
         const { orderId, status, geolocation } = req.body;
-
         try {
             const order = await Order.findById(orderId);
             if (!order) {
@@ -38,7 +25,8 @@ export class OrdersController {
             }
 
             if (status === 'delivered') {
-                const isValid = await this.geolocationVerifier.verify(geolocation, order.address);
+                // expect geolocation: { lat, lng }
+                const isValid = verifyGeolocation({ lat: geolocation?.lat, lng: geolocation?.lng }, { lat: order.deliveryLat as number, lng: order.deliveryLng as number });
                 if (!isValid) {
                     res.status(400).json({ message: 'Invalid geolocation' });
                     return;
@@ -47,21 +35,19 @@ export class OrdersController {
 
             order.status = status;
             await order.save();
-
             res.status(200).json(order);
         } catch (error) {
-            res.status(500).json({ message: 'Error updating order status', error });
+            res.status(500).json({ message: 'Error updating order status', error: String(error) });
         }
     }
 
     public async assignOrderToCourier(req: Request, res: Response): Promise<void> {
-        const { orderId, courierId } = req.body;
-
+        const { courierId } = req.body;
         try {
-            const order = await this.assignment.assign(orderId, courierId);
-            res.status(200).json(order);
+            const assigned = await assignOrdersToCourier(courierId);
+            res.status(200).json({ assigned });
         } catch (error) {
-            res.status(500).json({ message: 'Error assigning order', error });
+            res.status(500).json({ message: 'Error assigning orders', error: String(error) });
         }
     }
 }

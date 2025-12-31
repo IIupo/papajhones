@@ -1,39 +1,13 @@
-import { Schema, model } from 'mongoose';
+// Lightweight Order model type for server-side logic (DB is Postgres)
+export type Order = {
+    id: string;
+    external_iiko_id?: string | null;
+    status: 'pending' | 'ready' | 'assigned' | 'delivered' | 'at_restaurant' | string;
+    deliveryLat?: number | null;
+    deliveryLng?: number | null;
+    assigned_to?: string | null;
+    created_at?: string | null;
+    [k: string]: any;
+};
 
-const orderSchema = new Schema({
-    orderId: {
-        type: String,
-        required: true,
-        unique: true
-    },
-    status: {
-        type: String,
-        enum: ['pending', 'ready', 'delivered', 'at_restaurant'],
-        default: 'pending'
-    },
-    address: {
-        type: String,
-        required: true
-    },
-    courierId: {
-        type: String,
-        required: false
-    },
-    createdAt: {
-        type: Date,
-        default: Date.now
-    },
-    updatedAt: {
-        type: Date,
-        default: Date.now
-    }
-});
-
-orderSchema.pre('save', function(next) {
-    this.updatedAt = Date.now();
-    next();
-});
-
-const Order = model('Order', orderSchema);
-
-export default Order;
+export default {} as any;

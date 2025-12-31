@@ -22,8 +22,8 @@ const OrderItem: React.FC<OrderItemProps> = ({ orderId, orderDetails, onDelivere
   return (
     <View style={styles.container}>
       <Text style={styles.orderDetails}>{orderDetails}</Text>
-      <Button title="Delivered" onPress={handleDelivered} />
-      <Button title="At Restaurant" onPress={handleAtRestaurant} />
+      <Button title="Доставлено" onPress={handleDelivered} />
+      <Button title="В ресторане" onPress={handleAtRestaurant} />
     </View>
   );
 };

@@ -27,7 +27,7 @@ const DeliveredButton: React.FC<DeliveredButtonProps> = ({ orderId, orderAddress
   };
 
   return (
-    <Button title="Mark as Delivered" onPress={handleDelivery} />
+    <Button title="Доставлен" onPress={handleDelivery} />
   );
 };
 

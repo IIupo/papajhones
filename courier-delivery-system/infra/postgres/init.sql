@@ -11,7 +11,8 @@ CREATE TABLE orders (
     courier_id INT REFERENCES couriers(id),
     status VARCHAR(50) NOT NULL,
     address VARCHAR(255) NOT NULL,
-    geolocation GEOGRAPHY(POINT, 4326),
+    delivery_lat double precision,
+    delivery_lng double precision,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
