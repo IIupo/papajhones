@@ -6,8 +6,8 @@ import { getOrderLocation } from '../services/api';
 
 const MapViewScreen = ({ route }) => {
     const { orderId } = route.params;
-    const [orderLocation, setOrderLocation] = useState(null);
-    const { location, requestLocationPermission } = useGeolocation();
+    const [orderLocation, setOrderLocation] = useState<any>(null);
+    const { location } = useGeolocation();
 
     useEffect(() => {
         const fetchOrderLocation = async () => {
@@ -31,8 +31,8 @@ const MapViewScreen = ({ route }) => {
             <MapView
                 style={styles.map}
                 initialRegion={{
-                    latitude: location.latitude,
-                    longitude: location.longitude,
+                    latitude: location?.latitude ?? 55.75,
+                    longitude: location?.longitude ?? 37.61,
                     latitudeDelta: 0.0922,
                     longitudeDelta: 0.0421,
                 }}

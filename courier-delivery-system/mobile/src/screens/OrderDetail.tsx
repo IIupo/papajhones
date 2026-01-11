@@ -8,7 +8,7 @@ const OrderDetail = () => {
   const route = useRoute();
   const { orderId } = route.params;
   const [order, setOrder] = useState(null);
-  const { location, getCurrentLocation } = useGeolocation();
+  const { location } = useGeolocation();
 
   useEffect(() => {
     const fetchOrderDetails = async () => {

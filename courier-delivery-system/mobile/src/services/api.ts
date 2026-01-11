@@ -8,6 +8,13 @@ const axiosInstance = axios.create({
 
 type Geo = { lat: number; lng: number };
 
+// Helper: convert client location { latitude, longitude } to server Geo { lat, lng }
+function toServerGeo(loc: { latitude: number; longitude: number } | { lat: number; lng: number } | null): Geo | null {
+    if (!loc) return null as any;
+    if ((loc as any).latitude !== undefined) return { lat: (loc as any).latitude, lng: (loc as any).longitude };
+    return (loc as any) as Geo;
+}
+
 /**
  * Получить список заказов для курьера
  */
@@ -20,6 +27,26 @@ export const fetchOrders = async (courierId: string) => {
         console.error('Error fetching orders:', error);
         throw error;
     }
+};
+
+export const getOrderDetails = async (orderId: string) => {
+    if (!orderId) throw new Error('missing orderId');
+    try {
+        const response = await axiosInstance.get(`/orders/${orderId}`);
+        return response.data;
+    } catch (error) {
+        console.error('Error fetching order details:', error);
+        throw error;
+    }
+};
+
+export const getOrderLocation = async (orderId: string) => {
+    const details = await getOrderDetails(orderId);
+    // Expect server returns delivery_lat/delivery_lng or delivered_lat/delivered_lng
+    const lat = details.delivery_lat ?? details.delivered_lat ?? details.lat ?? null;
+    const lng = details.delivery_lng ?? details.delivered_lng ?? details.lng ?? null;
+    if (lat == null || lng == null) return null;
+    return { latitude: Number(lat), longitude: Number(lng) };
 };
 
 /**
@@ -36,6 +63,32 @@ export const markOrderAsDelivered = async (orderId: string, courierId: string, g
         return response.data;
     } catch (error) {
         console.error('Error marking order as delivered:', error);
+        throw error;
+    }
+};
+
+// Backwards-compatible wrapper expected by screens: markAsDelivered(orderId, location)
+export const markAsDelivered = async (orderId: string, location: { latitude: number; longitude: number } | null) => {
+    if (!orderId || !location) throw new Error('invalid args');
+    const geo = toServerGeo(location);
+    if (!geo) throw new Error('invalid location format');
+    try {
+        // POST single-order deliver endpoint
+        const response = await axiosInstance.post(`/orders/${orderId}/deliver`, { geolocation: geo });
+        return response.data;
+    } catch (error) {
+        console.error('Error marking as delivered:', error);
+        throw error;
+    }
+};
+
+export const markAtRestaurant = async (orderId: string) => {
+    if (!orderId) throw new Error('missing orderId');
+    try {
+        const response = await axiosInstance.post(`/orders/${orderId}/at-restaurant`);
+        return response.data;
+    } catch (error) {
+        console.error('Error marking at restaurant:', error);
         throw error;
     }
 };
@@ -77,6 +130,25 @@ export const markOrdersAsDelivered = async (orderIds: string[], courierId: strin
     } catch (error) {
         console.error('Error marking orders as delivered:', error);
         throw error;
+    }
+};
+
+// Generic update helper used by OrdersList: updateOrderStatus(orderId, status, location?)
+export const updateOrderStatus = async (orderId: string, status: string, location?: { latitude: number; longitude: number } | null) => {
+    if (!orderId || !status) throw new Error('invalid args');
+    if (status === 'delivered') {
+        return await markAsDelivered(orderId, location ?? null);
+    }
+    if (status === 'at_restaurant' || status === 'at-restaurant') {
+        return await markAtRestaurant(orderId);
+    }
+    // Fallback: call a generic endpoint
+    try {
+        const resp = await axiosInstance.post(`/orders/${orderId}/status`, { status });
+        return resp.data;
+    } catch (err) {
+        console.error('Error updating order status:', err);
+        throw err;
     }
 };
 
